@@ -103,17 +103,21 @@ This app runs an HTTP server on your phone, reachable by any device on the same 
 
 ### APK signing
 
-Release APKs are signed by the maintainer with a release keystore. Verify the SHA-256 fingerprint of the signing certificate before installing an update — if the fingerprint changes unexpectedly, do not install.
+Release APKs are signed by the maintainer with a dedicated release keystore.
 
-Check the fingerprint on a downloaded APK:
+**Canonical signing certificate SHA-256 fingerprint** — the same across every release from `v0.1.2` onward. If a downloaded APK shows a different fingerprint, it did not come from the same source, **do not install it**:
 
-```bash
-keytool -printcert -jarfile app-release.apk | grep SHA256
+```
+27:07:14:32:49:A7:35:42:B0:79:B3:12:B9:1B:2E:B5:12:D5:28:F4:22:F3:5F:0B:0A:27:D2:5E:60:B3:20:49
 ```
 
-The authoritative fingerprint is published in the GitHub Release notes for each version.
+Verify a downloaded APK with `apksigner` from Android SDK build-tools:
 
-Debug-signed APKs (when CI runs without a release keystore configured) are still produced as build artifacts so contributors can test — but they are never attached to tagged releases.
+```bash
+apksigner verify --print-certs app-release.apk
+```
+
+Debug-signed APKs (from before `v0.1.2`, or from CI builds of PRs without access to the signing secrets) carry the Android SDK public debug fingerprint instead and must not be installed as production builds. If you have `v0.1.0` or `v0.1.1` installed, uninstall it before installing `v0.1.2` — Android will refuse to upgrade across different signing certificates.
 
 ### Reporting vulnerabilities
 

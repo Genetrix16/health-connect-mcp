@@ -42,8 +42,10 @@ be patient). If you get no response in 14 days, you may disclose publicly.
   control on data endpoints.
 - No outbound network calls are made by the app. Data only leaves the phone
   in response to authenticated requests from the user's own MCP client.
-- Release APKs are signed by the maintainer. Users should verify the
-  SHA-256 fingerprint of the signing certificate before installing updates.
+- Release APKs are signed by the maintainer. The canonical signing
+  certificate SHA-256 fingerprint is pinned in the [README](README.md#apk-signing)
+  and in the `v0.1.2` release notes. Users should verify every update
+  against it.
 
 ## Credits
 
