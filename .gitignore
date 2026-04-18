@@ -1,0 +1,23 @@
+# Gradle
+.gradle/
+build/
+android/.gradle/
+android/build/
+android/app/build/
+android/gradle/wrapper/gradle-wrapper.jar
+android/gradlew
+android/gradlew.bat
+local.properties
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Node
+node_modules/
+mcp-server/node_modules/
+
+# OS
+.DS_Store
+Thumbs.db
