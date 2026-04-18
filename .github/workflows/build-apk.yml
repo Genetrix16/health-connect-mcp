@@ -65,10 +65,17 @@ jobs:
 
       - name: Print release APK signing fingerprint
         if: env.SIGNING_KEYSTORE_PATH != ''
+        continue-on-error: true
         run: |
           APK=$(ls app/build/outputs/apk/release/*.apk | head -n1)
           echo "Release APK: $APK"
-          keytool -printcert -jarfile "$APK" | grep -E "SHA256|Owner|Valid"
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner 2>/dev/null | sort -V | tail -n1)
+          if [ -n "$APKSIGNER" ]; then
+            "$APKSIGNER" verify --print-certs --verbose "$APK" || true
+          else
+            echo "::warning::apksigner not found; falling back to keytool"
+            keytool -printcert -jarfile "$APK" || echo "::warning::keytool -printcert failed (APK may be v2/v3-signed only)"
+          fi
 
       - name: Upload debug APK artifact
         uses: actions/upload-artifact@v4
