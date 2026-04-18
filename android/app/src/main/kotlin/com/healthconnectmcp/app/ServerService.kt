@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
@@ -19,7 +20,16 @@ class ServerService : Service() {
         val port = intent?.getIntExtra(EXTRA_PORT, 8080) ?: 8080
         val token = intent?.getStringExtra(EXTRA_TOKEN) ?: ""
 
-        startForeground(NOTIFICATION_ID, buildNotification(port))
+        val notification = buildNotification(port)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            startForeground(
+                NOTIFICATION_ID,
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+            )
+        } else {
+            startForeground(NOTIFICATION_ID, notification)
+        }
 
         try {
             server?.stop()
