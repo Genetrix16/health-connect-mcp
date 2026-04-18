@@ -8,6 +8,7 @@ import {
 
 const BASE_URL = process.env.HC_MCP_URL;
 const TOKEN = process.env.HC_MCP_TOKEN || "";
+const REQUEST_TIMEOUT_MS = 10_000;
 
 if (!BASE_URL) {
   console.error(
@@ -24,12 +25,17 @@ async function request(path, params = {}) {
   const headers = {};
   if (TOKEN) headers["Authorization"] = `Bearer ${TOKEN}`;
 
-  const res = await fetch(url, { headers });
-  const text = await res.text();
-  if (!res.ok) {
-    throw new Error(`HTTP ${res.status}: ${text}`);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, { headers, signal: controller.signal });
+    if (!res.ok) {
+      throw new Error(`upstream_${res.status}`);
+    }
+    return await res.text();
+  } finally {
+    clearTimeout(timer);
   }
-  return text;
 }
 
 function today() {
@@ -131,7 +137,7 @@ const tools = [
 ];
 
 const server = new Server(
-  { name: "health-connect-mcp", version: "0.1.0" },
+  { name: "health-connect-mcp", version: "0.1.2" },
   { capabilities: { tools: {} } }
 );
 

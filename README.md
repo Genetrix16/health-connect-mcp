@@ -23,12 +23,13 @@ No cloud involved. Your data stays between your phone and your computer.
 ## Install — Android app
 
 1. Download the latest `app-release.apk` from [Releases](../../releases).
-2. Install it on your Android phone (allow "Install from unknown sources").
-3. Open the app and grant Health Connect permissions when prompted.
-4. Tap **Start server**.
-5. Note the **Server URL** and **Bearer Token** shown.
+2. **Verify the signing certificate fingerprint** matches the SHA-256 published with the release (see [APK signing](#apk-signing)). If it does not match, do not install.
+3. Install it on your Android phone (you'll need to allow "Install from unknown sources").
+4. Open the app and grant Health Connect permissions when prompted.
+5. Tap **Start server**.
+6. Copy the **Server URL** and **Bearer Token** shown — you'll need them in the next step.
 
-The app will keep running in background while connected to power or foreground.
+The app runs as a foreground service with a persistent notification.
 
 ## Install — MCP server
 
@@ -41,16 +42,18 @@ claude mcp add health-connect \
   -- npx -y health-connect-mcp-server
 ```
 
-Replace `PHONE_IP` and `YOUR_TOKEN` with the values shown in the app.
+Replace `PHONE_IP` and `YOUR_TOKEN` with the values from the Android app.
+
+Restart your MCP client (e.g., VSCode / Claude Code) so the new server loads.
 
 ## Use
 
 Once configured, ask Claude things like:
 
-- "¿Cuántos pasos hice esta semana?"
-- "¿Cómo dormí anoche?"
-- "Compara mi frecuencia cardíaca promedio de esta semana con la anterior"
-- "¿Cuántas calorías he quemado hoy?"
+- "How many steps did I take this week?"
+- "How did I sleep last night?"
+- "Compare my average heart rate this week versus last week."
+- "How many calories have I burned today?"
 
 ## Tools exposed by the MCP
 
@@ -66,18 +69,18 @@ Once configured, ask Claude things like:
 
 If you want to integrate this with another client:
 
-| Method | Path | Query params |
-|---|---|---|
-| GET | `/health` | — |
-| GET | `/summary` | `date=YYYY-MM-DD` |
-| GET | `/steps` | `date` |
-| GET | `/calories` | `date` |
-| GET | `/distance` | `date` |
-| GET | `/sleep` | `date` |
-| GET | `/heart-rate` | `date` |
-| GET | `/range` | `metric=steps\|calories\|distance\|sleep\|heart_rate&start&end` |
+| Method | Path | Auth? | Query params |
+|---|---|---|---|
+| GET | `/health` | no | — |
+| GET | `/summary` | yes | `date=YYYY-MM-DD` |
+| GET | `/steps` | yes | `date` |
+| GET | `/calories` | yes | `date` |
+| GET | `/distance` | yes | `date` |
+| GET | `/sleep` | yes | `date` |
+| GET | `/heart-rate` | yes | `date` |
+| GET | `/range` | yes | `metric=steps\|calories\|distance\|sleep\|heart_rate&start&end` |
 
-All authenticated endpoints require: `Authorization: Bearer <token>`.
+`/health` returns `{"status":"ok"}` with no information about the app version. All other endpoints require `Authorization: Bearer <token>`. Failed authentication is rate-limited (10 attempts per minute per source IP).
 
 ## Requirements
 
@@ -85,12 +88,50 @@ All authenticated endpoints require: `Authorization: Bearer <token>`.
 - A phone and computer on the same WiFi
 - Node.js 18+ on your computer
 
-## Privacy
+## Security
 
-- Your health data never leaves your local network.
-- No analytics, no telemetry, no cloud storage.
-- The Bearer token protects against other devices on your WiFi.
+### Threat model
+
+This app runs an HTTP server on your phone, reachable by any device on the same WiFi. The security model assumes:
+
+- **You trust every device on your WiFi.** Traffic is plain HTTP (no TLS). Anyone who can sniff your LAN can read your health data and capture the Bearer token. Use only on home, work, or other private WiFi networks you control. **Do not use on public WiFi** (café, hotel, university, airport).
+- **The Bearer token is your only defense.** It is 24 random bytes (192-bit entropy), generated with `SecureRandom`. Auth comparison is constant-time. Failed attempts are rate-limited (10/minute per IP) and delayed 250 ms each.
+- **If you believe the token has leaked**, tap **Regenerate token** in the app. This rotates the token in storage *and* restarts the running server so the old token stops working immediately.
+- **Read-only.** No tool writes to Health Connect. The app requests read-only permissions for steps, total/active calories, sleep, heart rate, and distance. Nothing else.
+- **No cloud, no telemetry, no analytics.** The app makes no outbound network calls. Data only leaves the phone in response to authenticated requests from your own MCP client. Note: conversations with your MCP client (Claude, etc.) travel to that client's inference backend — and sleep session titles may include free-form text you wrote in your wearable app, so treat them as potentially sensitive.
+- **No adb backups.** The APK sets `android:allowBackup="false"`, so the token is not captured by `adb backup`.
+
+### APK signing
+
+Release APKs are signed by the maintainer with a release keystore. Verify the SHA-256 fingerprint of the signing certificate before installing an update — if the fingerprint changes unexpectedly, do not install.
+
+Check the fingerprint on a downloaded APK:
+
+```bash
+keytool -printcert -jarfile app-release.apk | grep SHA256
+```
+
+The authoritative fingerprint is published in the GitHub Release notes for each version.
+
+Debug-signed APKs (when CI runs without a release keystore configured) are still produced as build artifacts so contributors can test — but they are never attached to tagged releases.
+
+### Reporting vulnerabilities
+
+See [SECURITY.md](SECURITY.md).
+
+## Building from source
+
+Requirements: JDK 17, Android SDK, Node.js 18+.
+
+```bash
+# Android APK (debug)
+cd android && ./gradlew assembleDebug
+# APK lands at android/app/build/outputs/apk/debug/app-debug.apk
+
+# MCP server
+cd mcp-server && npm install && npm start
+```
 
 ## License
 
-MIT
+MIT. See [LICENSE](LICENSE).

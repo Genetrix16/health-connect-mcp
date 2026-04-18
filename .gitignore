@@ -21,3 +21,9 @@ mcp-server/node_modules/
 # OS
 .DS_Store
 Thumbs.db
+
+# Signing — never commit keystores or their properties
+*.keystore
+*.jks
+keystore.properties
+release.keystore

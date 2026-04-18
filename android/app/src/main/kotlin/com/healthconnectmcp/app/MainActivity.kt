@@ -132,9 +132,14 @@ fun HomeScreen(previousCrash: String?) {
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onErrorContainer
                     )
+                    Text(
+                        "May contain details from your Health Connect records. Review before sharing.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
                     SelectionContainer {
                         Text(
-                            previousCrash.take(2000),
+                            previousCrash.take(500),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onErrorContainer
                         )
@@ -229,6 +234,26 @@ fun HomeScreen(previousCrash: String?) {
                 .joinToString("") { "%02x".format(it) }
             token = newToken
             prefs.edit().putString("token", newToken).apply()
+
+            if (running) {
+                try {
+                    ctx.stopService(Intent(ctx, ServerService::class.java))
+                    val intent = Intent(ctx, ServerService::class.java).apply {
+                        putExtra(ServerService.EXTRA_PORT, port.toIntOrNull() ?: 8080)
+                        putExtra(ServerService.EXTRA_TOKEN, newToken)
+                    }
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        ContextCompat.startForegroundService(ctx, intent)
+                    } else {
+                        ctx.startService(intent)
+                    }
+                    statusMessage = "Token rotated and server restarted"
+                } catch (e: Exception) {
+                    statusMessage = "Token rotated; restart failed: ${e.message}"
+                }
+            } else {
+                statusMessage = "Token rotated"
+            }
         }) {
             Text("Regenerate token")
         }
