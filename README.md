@@ -88,6 +88,12 @@ If you want to integrate this with another client:
 - A phone and computer on the same WiFi
 - Node.js 18+ on your computer
 
+### IP address changes
+
+Your phone's local IP may change if your router reassigns it (e.g. after a reboot). If the MCP stops working, open the Android app — the current IP is always shown in the **Server URL** field. Update `HC_MCP_URL` in your MCP config to match.
+
+To avoid this, assign a static (reserved) IP to your phone in your router's DHCP settings. Once set, the IP shown in the app will stay the same across reboots.
+
 ## Security
 
 ### Threat model
